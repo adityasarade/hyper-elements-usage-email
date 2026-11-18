@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "template": {
+    "module": "../templates/usage-report.tsx",
+    "id": "kestrel.UsageReport",
+    "version": "2.0.0",
+    "sha256": "641f179520d9513dd1b88f7b8f2afd1f9760840ccbe4c73410a7e13a9b4365dd"
+  },
+  "values": {
+    "companyName": "Kestrel Systems",
+    "postalAddress": "18 Kildeer Ln, Alder Reach",
+    "linkDomains": [
+      "kestrel.example"
+    ],
+    "workspace": "Northwind Labs",
+    "month": "2026-10-01",
+    "unit": {
+      "singular": "request",
+      "plural": "requests"
+    },
+    "metricLabel": "API requests",
+    "daily": [
+      1245000,
+      1516000,
+      1084000,
+      892000,
+      1414000,
+      1605000,
+      1738000,
+      1573000,
+      1722000,
+      963000,
+      1019000,
+      1406000,
+      1687000,
+      1805000,
+      1612000,
+      1945000,
+      1135000,
+      1082000,
+      1738000,
+      1953000,
+      1785000,
+      1939000,
+      2421000,
+      1188000,
+      1078000,
+      1747000,
+      1832000,
+      2061000,
+      1936000,
+      1865000,
+      1214000
+    ],
+    "previousTotal": 43047000,
+    "planName": "Scale",
+    "planLimit": 38000000,
+    "breakdownTitle": "Top endpoints",
+    "breakdownNameStyle": "code",
+    "breakdown": [
+      {
+        "name": "/v1/events",
+        "count": 18740618
+      },
+      {
+        "name": "/v1/resolve",
+        "count": 11369082
+      },
+      {
+        "name": "/v1/tokens",
+        "count": 7803154
+      },
+      {
+        "name": "/v1/workspaces/{workspace}/snapshots/{snapshot}",
+        "count": 4221703
+      }
+    ],
+    "performanceTitle": "Gateway performance",
+    "performance": [
+      {
+        "label": "p50 latency",
+        "value": 42,
+        "unit": "ms",
+        "previous": 39
+      },
+      {
+        "label": "p95 latency",
+        "value": 118,
+        "unit": "ms",
+        "previous": 126
+      },
+      {
+        "label": "Error rate",
+        "value": 0.18,
+        "unit": "%",
+        "previous": 0.22
+      }
+    ],
+    "usageUrl": "https://kestrel.example/northwind/usage",
+    "planUrl": "https://kestrel.example/northwind/plan",
+    "notificationsUrl": "https://kestrel.example/northwind/notifications"
+  }
+}

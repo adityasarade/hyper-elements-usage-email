@@ -3,12 +3,22 @@
   "template": {
     "module": "../templates/usage-report.tsx",
     "id": "kestrel.UsageReport",
-    "version": "1.0.0",
-    "sha256": "875147bcd16db4d425d7083feb93518ab4ed3b04d719deb9b5ee8e4af6982fdc"
+    "version": "2.0.0",
+    "sha256": "641f179520d9513dd1b88f7b8f2afd1f9760840ccbe4c73410a7e13a9b4365dd"
   },
   "values": {
+    "companyName": "Kestrel Systems",
+    "postalAddress": "18 Kildeer Ln, Alder Reach",
+    "linkDomains": [
+      "kestrel.example"
+    ],
     "workspace": "Morrow Works",
     "month": "2026-02-01",
+    "unit": {
+      "singular": "request",
+      "plural": "requests"
+    },
+    "metricLabel": "API requests",
     "daily": [
       0,
       9630,
@@ -42,31 +52,49 @@
     "previousTotal": 332600,
     "planName": "Starter",
     "planLimit": 2000000,
-    "endpoints": [
+    "breakdownTitle": "Top endpoints",
+    "breakdownNameStyle": "code",
+    "breakdown": [
       {
-        "path": "/v2/schemas/validate",
-        "requests": 92718
+        "name": "/v2/schemas/validate",
+        "count": 92718
       },
       {
-        "path": "/v2/events",
-        "requests": 70631
+        "name": "/v2/events",
+        "count": 70631
       },
       {
-        "path": "/v2/keys",
-        "requests": 44122
+        "name": "/v2/keys",
+        "count": 44122
       },
       {
-        "path": "/v2/status",
-        "requests": 14705
+        "name": "/v2/status",
+        "count": 14705
       },
       {
-        "path": "/v2/replay",
-        "requests": 3632
+        "name": "/v2/replay",
+        "count": 3632
       }
     ],
-    "p50Ms": 19.6,
-    "p95Ms": 73.4,
-    "errorRate": 0.00023,
+    "performanceTitle": "Gateway performance",
+    "performance": [
+      {
+        "label": "p50 latency",
+        "value": 19.6,
+        "unit": "ms",
+        "previous": 21
+      },
+      {
+        "label": "p95 latency",
+        "value": 73.4,
+        "unit": "ms"
+      },
+      {
+        "label": "Error rate",
+        "value": 0.023,
+        "unit": "%"
+      }
+    ],
     "usageUrl": "https://kestrel.example/morrow/usage",
     "planUrl": "https://kestrel.example/morrow/plan",
     "notificationsUrl": "https://kestrel.example/morrow/notifications"

@@ -4,7 +4,9 @@
   "type": "module",
   "scripts": {
     "build": "tsx scripts/build.tsx",
-    "check": "hyper-elements check src templates designs"
+    "check": "hyper-elements check src templates designs",
+    "design-json": "tsx scripts/design-json.tsx",
+    "builder-preview": "node scripts/builder-preview.mjs"
   },
   "dependencies": {
     "@hyper-elements/react": "0.5.0",
@@ -13,14 +15,11 @@
   },
   "devDependencies": {
     "@hyper-elements/cli": "^0.3.0",
-    "@hyper-elements/email-clients": "*",
-    "@hyper-elements/lint": "*",
-    "@react-pdf/renderer": "4.9.0",
-    "@resvg/resvg-js": "^2.6.2",
+    "@hyper-elements/email-clients": "^0.5.0",
+    "@hyper-elements/lint": "^0.1.8",
     "@types/node": "^24.19.2",
     "@types/react": "^19.2.0",
     "playwright": "^1.64.1",
-    "satori": "~0.33.5",
     "tsx": "^4.20.0",
     "typescript": "^5.9.0"
   },

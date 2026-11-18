@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "template": {
+    "module": "../templates/usage-report.tsx",
+    "id": "kestrel.UsageReport",
+    "version": "2.0.0",
+    "sha256": "641f179520d9513dd1b88f7b8f2afd1f9760840ccbe4c73410a7e13a9b4365dd"
+  },
+  "values": {
+    "companyName": "Postern Mail",
+    "postalAddress": "24 Lantern Row, Alder Reach",
+    "linkDomains": [
+      "postern.example",
+      "console.postern.example"
+    ],
+    "workspace": "Fieldnote Supply",
+    "month": "2026-06-01",
+    "unit": {
+      "singular": "email",
+      "plural": "emails"
+    },
+    "metricLabel": "Emails sent",
+    "daily": [
+      34900,
+      36720,
+      39081,
+      40490,
+      42760,
+      21300,
+      20612,
+      43567,
+      45200,
+      48010,
+      48860,
+      50600,
+      25300,
+      22800,
+      47780,
+      49830,
+      51300,
+      53700,
+      55400,
+      25400,
+      24100,
+      52200,
+      53500,
+      58800,
+      81740,
+      54600,
+      29200,
+      26600,
+      55800,
+      57300
+    ],
+    "previousTotal": 1189000,
+    "planName": "Dispatch",
+    "planLimit": 2000000,
+    "breakdownTitle": "Top senders",
+    "breakdownNameStyle": "text",
+    "breakdown": [
+      {
+        "name": "Order confirmations",
+        "count": 448362
+      },
+      {
+        "name": "Warehouse dispatch and returns",
+        "count": 313278
+      },
+      {
+        "name": "Account notifications",
+        "count": 220018
+      },
+      {
+        "name": "Password reset",
+        "count": 109032
+      }
+    ],
+    "performance": [],
+    "usageUrl": "https://console.postern.example/fieldnote/usage",
+    "planUrl": "https://postern.example/fieldnote/plan",
+    "notificationsUrl": "https://console.postern.example/fieldnote/notifications"
+  }
+}

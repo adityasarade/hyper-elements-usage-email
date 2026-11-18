@@ -1,10 +1,10 @@
 /**
  * Kestrel, a fictional API gateway, sends a workspace its month-end usage report.
  *
- * Figtree and DM Mono set the report on warm paper. The daily chart is a strip of
+ * Figtree headlines and DM Mono figures sit on warm paper. The daily chart is a strip of
  * table cells on dark ink, with the busiest day picked out in kestrel-rust.
  */
-import { Button, Column, Email, Heading, Html, Link, Row, Section, Span, Text, type LinkProps } from "@hyper-elements/react";
+import { Button, Column, Divider, Email, Heading, Html, Link, Row, Section, Span, Text, type LinkProps } from "@hyper-elements/react";
 
 export const meta = {
   title: "Kestrel monthly usage report",
@@ -19,7 +19,12 @@ const QUIET = "#645A51";
 const RULE = "#DDD3C7";
 const TINT = "#F5EBE0";
 const RUST = "#974021";
-const RUST_DOWN = "#793118";
+const GREEN = "#27644A";
+const AMBER = "#795016";
+const ALERT = "#8B3024";
+const CALM_WASH = "#EDF2E9";
+const WARN_WASH = "#F8EED9";
+const ALERT_WASH = "#F7E8E1";
 const PLOT = "#29231F";
 const PLOT_TEXT = "#FFF1DF";
 const PLOT_QUIET = "#D4C0AE";
@@ -31,36 +36,45 @@ const PEAK = "#FF8A57";
 const SANS = "Figtree, 'Helvetica Neue', Helvetica, Arial, sans-serif";
 const MONO = "'DM Mono', Consolas, 'Courier New', monospace";
 const SITE = "https://kestrel.example";
+export const domainPattern = "^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?$";
 
 const mono = { fontFamily: MONO, fontSize: 14, lineHeight: 1.4 } as const;
-const label = { ...mono, color: QUIET, letterSpacing: 0.5, textTransform: "uppercase" } as const;
-const smallHeading = { fontSize: 22, fontWeight: 700, lineHeight: 1.2, letterSpacing: -0.45 } as const;
-const whole = new Intl.NumberFormat("en-US");
-const short = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
-const compactDetail = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 2 });
+const label = { ...mono, color: QUIET } as const;
+const smallHeading = { fontSize: 22, fontWeight: 700, lineHeight: 1.2 } as const;
+const exact = new Intl.NumberFormat("en-US", { maximumSignificantDigits: 15 });
+const compact = new Intl.NumberFormat("en-US", { notation: "compact", minimumSignificantDigits: 3, maximumSignificantDigits: 3 });
+const decimal = new Intl.NumberFormat("en-US", { maximumSignificantDigits: 3 });
+const scientific = new Intl.NumberFormat("en-US", { notation: "scientific", maximumSignificantDigits: 3 });
 const percent = new Intl.NumberFormat("en-US", { style: "percent", maximumFractionDigits: 1 });
 const signed = new Intl.NumberFormat("en-US", { style: "percent", maximumFractionDigits: 1, signDisplay: "exceptZero" });
-const errorPercent = new Intl.NumberFormat("en-US", { style: "percent", maximumFractionDigits: 3 });
-const latency = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 const monthAndYear = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
 const monthName = new Intl.DateTimeFormat("en-US", { month: "long", timeZone: "UTC" });
 const shortMonth = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" });
+const longDate = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", timeZone: "UTC" });
 const dayAndMonth = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
 
+type QuantityUnit = { singular: string; plural: string };
+type Figure = { label: string; value: number; unit: string; previous?: number };
+
 export type UsageReportData = {
+  companyName: string;
+  postalAddress: string;
+  linkDomains: readonly string[];
   workspace: string;
   /** An ISO date in the completed billing month. */
   month: string;
-  /** One whole request count per UTC day, from the first through the last. */
+  unit: QuantityUnit;
+  metricLabel: string;
+  /** One usage value per UTC day, from the first through the last. */
   daily: readonly number[];
   previousTotal: number;
   planName: string;
   planLimit: number;
-  endpoints: readonly { path: string; requests: number }[];
-  p50Ms: number;
-  p95Ms: number;
-  /** A fraction from 0 to 1. */
-  errorRate: number;
+  breakdownTitle: string;
+  breakdownNameStyle: "code" | "text";
+  breakdown?: readonly { name: string; count: number }[];
+  performanceTitle?: string;
+  performance?: readonly Figure[];
   usageUrl: LinkProps["href"];
   planUrl: LinkProps["href"];
   notificationsUrl: LinkProps["href"];
@@ -69,7 +83,14 @@ export type UsageReportData = {
 export type KestrelUsageReportProps = { data?: UsageReportData };
 
 export const exampleUsage = {
+  companyName: "Kestrel Systems",
+  postalAddress: "18 Kildeer Ln, Alder Reach",
+  linkDomains: ["kestrel.example"],
   workspace: "Northwind Labs",
+  unit: { singular: "request", plural: "requests" },
+  metricLabel: "API requests",
+  breakdownTitle: "Top endpoints",
+  breakdownNameStyle: "code",
   month: "2026-10-01",
   daily: [
     1_245_000, 1_516_000, 1_084_000, 892_000, 1_414_000, 1_605_000, 1_738_000,
@@ -81,15 +102,18 @@ export const exampleUsage = {
   previousTotal: 43_047_000,
   planName: "Scale",
   planLimit: 60_000_000,
-  endpoints: [
-    { path: "/v1/events", requests: 18_740_618 },
-    { path: "/v1/resolve", requests: 11_369_082 },
-    { path: "/v1/tokens", requests: 7_803_154 },
-    { path: "/v1/projects", requests: 4_221_703 },
+  breakdown: [
+    { name: "/v1/events", count: 18_740_618 },
+    { name: "/v1/resolve", count: 11_369_082 },
+    { name: "/v1/tokens", count: 7_803_154 },
+    { name: "/v1/projects", count: 4_221_703 },
   ],
-  p50Ms: 42,
-  p95Ms: 118,
-  errorRate: 0.0018,
+  performanceTitle: "Gateway performance",
+  performance: [
+    { label: "p50 latency", value: 42, unit: "ms", previous: 39 },
+    { label: "p95 latency", value: 118, unit: "ms", previous: 126 },
+    { label: "Error rate", value: 0.18, unit: "%", previous: 0.22 },
+  ],
   usageUrl: `${SITE}/northwind/usage`,
   planUrl: `${SITE}/northwind/plan`,
   notificationsUrl: `${SITE}/northwind/notifications`,
@@ -121,32 +145,74 @@ function monthStart(isoDate: string) {
   return dateInMonth(date, 1);
 }
 
-function chartCeiling(peak: number) {
-  if (peak <= 1) return 1;
-  const unit = 10 ** Math.floor(Math.log10(peak));
-  return Math.ceil(peak / (unit / 2)) * (unit / 2);
+function number(value: number) {
+  const magnitude = Math.abs(value);
+  if (magnitude >= 1e15 || (magnitude > 0 && magnitude < 0.001)) return scientific.format(value);
+  return magnitude >= 999.5 ? compact.format(value) : decimal.format(value);
 }
 
-function usageForecast(month: Date, total: number, limit: number) {
-  const next = shiftMonth(month, 1);
-  if (total === 0) return `No requests this month. There’s no usage pace to project into ${monthName.format(next)}.`;
-  const pace = total / daysInMonth(month);
-  const projected = pace * daysInMonth(next);
-  if (projected >= limit) {
-    return `At this pace, you’ll reach your limit around ${dayAndMonth.format(dateInMonth(next, Math.ceil(limit / pace)))}.`;
-  }
-  return `At this pace, ${monthName.format(next)} would close at ${short.format(Math.round(projected))}\u00a0requests.`;
+// Daily quantities can be fractional. Drop rounding noise before comparing them with a plan limit.
+function normalize(value: number) {
+  return Number(value.toPrecision(15));
+}
+
+function sumUsage(values: readonly number[]) {
+  return normalize(values.reduce((sum, value) => sum + value, 0));
+}
+
+function quantity(value: number, unit: QuantityUnit, format = number) {
+  return `${format(value)} ${value === 1 ? unit.singular : unit.plural}`;
+}
+
+function chartCeiling(peak: number) {
+  if (peak === 0) return 1;
+  const halfStep = 10 ** Math.floor(Math.log10(peak)) / 2 || peak;
+  return Math.ceil(peak / halfStep) * halfStep;
 }
 
 function usagePercent(ratio: number) {
-  if (ratio >= 100) return `${short.format(ratio * 100)}%`;
-  if (ratio >= 0.9995 && ratio < 1) return ">99.9%";
-  return percent.format(ratio);
+  if (ratio < 0.8 && ratio >= 0.7995) return "<80%";
+  if (ratio < 1 && ratio >= 0.9995) return "<100%";
+  if (ratio > 1 && ratio < 1.0005) return ">100%";
+  return ratio >= 10 ? `${number(ratio * 100)}%` : percent.format(ratio);
 }
 
-/** An empty colored cell scales without loading an image or needing a web font. */
+function usageForecast(month: Date, total: number, limit: number, unit: QuantityUnit) {
+  const next = shiftMonth(month, 1);
+  const pace = total / daysInMonth(month);
+  const projected = normalize(pace * daysInMonth(next));
+  if (projected > limit) {
+    const crossing = Math.min(daysInMonth(next), Math.floor(normalize(limit / pace)) + 1);
+    const date = longDate.format(dateInMonth(next, crossing)).replace(" ", " ");
+    return `At this pace, you’ll pass your limit around ${date}.`;
+  }
+  return `At this pace, ${monthName.format(next)} closes at ${quantity(projected, unit)}, ${usagePercent(projected / limit)} of your ${number(limit)} limit.`;
+}
+
+function companySite(data: UsageReportData) {
+  const domains = data.linkDomains.map((domain) => domain.toLowerCase());
+  const hostPattern = new RegExp(domainPattern, "i");
+  if (domains.length === 0 || domains.some((domain) => !hostPattern.test(domain))) {
+    throw new RangeError("Give at least one company link domain as a hostname, without a scheme or path.");
+  }
+  for (const link of [data.usageUrl, data.planUrl, data.notificationsUrl]) {
+    const href = typeof link === "string" ? link : link.href;
+    const url = URL.canParse(href) ? new URL(href) : undefined;
+    if (!url || !/^https?:\/\//i.test(href) || !domains.includes(url.hostname) || url.username || url.password) {
+      throw new RangeError(`Every report URL must use HTTP(S) on a listed company domain (${domains.join(", ")}).`);
+    }
+  }
+  return `https://${domains[0]}`;
+}
+
+const leftInset = { padding: [0, 0, 0, 36], mobile: { padding: [0, 0, 0, 16] } } as const;
+const rightInset = { padding: [0, 36, 0, 0], mobile: { padding: [0, 16, 0, 0] } } as const;
+const insets = { padding: [0, 36], mobile: { padding: [0, 16] } } as const;
+const quantityStyle = { ...mono, color: QUIET, textAlign: "right" } as const;
+
+/** Colored table cells give the meter a baseline without an image or web font. */
 function fillBar(ratio: number, height: number, track: string, fill: string) {
-  const filled = Math.min(1, ratio) * 100;
+  const filled = Math.min(1, Math.max(0, ratio)) * 100;
   return (
     <Row stackOnMobile={false} style={{ backgroundColor: track }}>
       {filled > 0 && <Column style={{ width: `${filled}%`, height, backgroundColor: fill }} />}
@@ -155,216 +221,268 @@ function fillBar(ratio: number, height: number, track: string, fill: string) {
   );
 }
 
-function DailyChart({ month, daily }: { month: Date; daily: readonly number[] }) {
+function DailyChart({ month, daily, unit }: { month: Date; daily: readonly number[]; unit: QuantityUnit }) {
   const peak = Math.max(...daily);
   const low = Math.min(...daily);
   const peakIndex = daily.indexOf(peak);
   const lowIndex = daily.indexOf(low);
   const ceiling = chartCeiling(peak);
   const plotHeight = 118;
-  const barHeight = (requests: number) => Math.round(plotHeight * requests / ceiling);
+  const barHeight = (count: number) => count === 0 ? 0 : Math.max(1, Math.round(plotHeight * (count / ceiling)));
   const dateLabel = (index: number) => dayAndMonth.format(dateInMonth(month, index + 1));
+  const daySummary = (index: number, count: number) => `${dateLabel(index)}, ${quantity(count, unit, exact.format)}.`;
   const weekly = Array.from({ length: Math.ceil(daily.length / 7) }, (_, week) => {
     const start = week * 7;
     const days = daily.slice(start, start + 7);
-    return `${start + 1}–${start + days.length} ${shortMonth.format(month)}: ${whole.format(days.reduce((sum, value) => sum + value, 0))}`;
+    return `${start + 1}–${start + days.length} ${shortMonth.format(month)}: ${quantity(sumUsage(days), unit, exact.format)}`;
   });
   const summary = [
-    `Busiest day: ${dateLabel(peakIndex)}, ${whole.format(peak)} requests.`,
-    `Quietest day: ${dateLabel(lowIndex)}, ${whole.format(low)} requests.`,
+    `Busiest day: ${daySummary(peakIndex, peak)}`,
+    `Quietest day: ${daySummary(lowIndex, low)}`,
     `Weekly totals: ${weekly.join("; ")}.`,
   ].join("\n");
 
   return (
-    <Column id="daily-chart" style={{ backgroundColor: PLOT, color: PLOT_TEXT, padding: [24, 24, 20], gap: 18, mobile: { padding: [20, 14, 18], gap: 15 } }}>
-      <Row stackOnMobile={false} style={{ alignItems: "center", gap: 8 }}>
-        <Column>
-          <Heading level={2} style={{ ...smallHeading, mobile: { fontSize: 20 } }}>Requests per day</Heading>
+    <>
+      <Row stackOnMobile={false} style={{ backgroundColor: PLOT, color: PLOT_TEXT, gap: 8, alignItems: "end" }}>
+        <Column style={{ padding: [22, 0, 8, 36], mobile: { padding: [20, 0, 8, 16] } }}>
+          <Heading level={2} style={smallHeading}>{`${unit.plural.charAt(0).toUpperCase()}${unit.plural.slice(1)} per day`}</Heading>
         </Column>
-        <Column style={{ width: 52 }}>
-          <Text style={{ ...mono, color: PLOT_QUIET, textAlign: "right" }}>{short.format(ceiling)}</Text>
+        <Column style={{ width: 98, padding: [0, 36, 8, 0], mobile: { padding: [0, 16, 8, 0] } }}>
+          <Text style={{ ...quantityStyle, color: PLOT_QUIET }}>{number(ceiling)}</Text>
         </Column>
       </Row>
-      <Column style={{ gap: 8 }}>
-        <Row id="daily-bars" stackOnMobile={false} style={{ alignItems: "end", gap: 3, padding: [plotHeight - barHeight(peak), 0, 0], border: { top: `1px solid ${PLOT_RULE}`, bottom: `1px solid ${PLOT_RULE}` }, mobile: { gap: 2 } }}>
-          {daily.map((requests, index) => {
-            const weekday = dateInMonth(month, index + 1).getUTCDay();
-            const weekend = weekday === 0 || weekday === 6;
-            return (
-              <Column
-                key={index}
-                style={{
-                  height: barHeight(requests),
-                  backgroundColor: requests === 0 ? undefined : index === peakIndex ? PEAK : weekend ? WEEKEND : WEEKDAY,
-                }}
-              />
-            );
-          })}
-        </Row>
-        <Row stackOnMobile={false}>
-          <Column><Text style={{ ...mono, color: PLOT_QUIET }}>{dateLabel(0)}</Text></Column>
-          <Column><Text style={{ ...mono, color: PLOT_QUIET, textAlign: "center" }}>{Math.floor(daily.length / 2) + 1}</Text></Column>
-          <Column><Text style={{ ...mono, color: PLOT_QUIET, textAlign: "right" }}>{daily.length}</Text></Column>
-        </Row>
-      </Column>
-      <Column>
-        <Row stackOnMobile={false} style={{ alignItems: "center", gap: 8 }}>
-          <Column>
-            <Text style={{ fontSize: 15, lineHeight: 1.4, color: PLOT_TEXT, mobile: { fontSize: 14 } }}>
-              {peak > 0 ? <><Span style={{ color: PEAK, fontWeight: 700 }}>Peak</Span> {dateLabel(peakIndex)} · {compactDetail.format(peak)}</> : "No requests recorded."}
-            </Text>
-          </Column>
-          <Column style={{ width: 91 }}>
-            <Row stackOnMobile={false} style={{ gap: 7, alignItems: "center" }}>
-              <Column style={{ width: 8, height: 8, backgroundColor: WEEKEND }} />
-              <Column><Text style={{ fontSize: 14, color: PLOT_QUIET, textAlign: "right" }}>Weekends</Text></Column>
+      <Row style={{ backgroundColor: PLOT }}>
+        <Column style={insets}>
+          <Column id="daily-chart" style={{ width: "100%" }}>
+            <Row stackOnMobile={false} style={{ alignItems: "end", gap: 2, padding: [plotHeight - barHeight(peak), 0, 0], border: { top: `1px solid ${PLOT_RULE}`, bottom: `1px solid ${PLOT_RULE}` } }}>
+              {daily.map((count, index) => {
+                const weekday = dateInMonth(month, index + 1).getUTCDay();
+                const weekend = weekday === 0 || weekday === 6;
+                return <Column key={index} style={{ height: barHeight(count), backgroundColor: count === 0 ? undefined : index === peakIndex ? PEAK : weekend ? WEEKEND : WEEKDAY }} />;
+              })}
             </Row>
+            <Html text={summary}><div role="img" aria-label={`Daily chart summary. ${summary.replaceAll("\n", " ")}`} /></Html>
           </Column>
-        </Row>
-        {/* The summary is made only from formatted UTC dates and counts. */}
-        <Html html={`<div role="img" aria-label="Daily chart summary. ${summary.replaceAll("\n", " ")}"></div>`} text={summary} />
-      </Column>
-    </Column>
-  );
-}
-
-function endpointRow(endpoint: UsageReportData["endpoints"][number], total: number) {
-  const { path, requests } = endpoint;
-  const displayCount = requests < 1_000_000_000 ? whole.format(requests) : short.format(requests);
-  return (
-    <Column key={path} style={{ gap: 7 }}>
-      <Row stackOnMobile={false} style={{ gap: 6, mobile: { gap: 3 } }}>
-        <Column><Text style={mono}>{path}</Text></Column>
-        <Column style={{ width: Math.ceil(displayCount.length * 8.5) + 1 }}>
-          <Text style={{ ...mono, color: QUIET, textAlign: "right" }}>{displayCount}</Text>
         </Column>
       </Row>
-      {fillBar(total > 0 ? requests / total : 0, 3, TINT, RUST)}
-    </Column>
+      <Row stackOnMobile={false} style={{ backgroundColor: PLOT, color: PLOT_QUIET }}>
+        <Column style={leftInset}><Text style={{ ...mono, padding: [6, 0, 0] }}>{dateLabel(0)}</Text></Column>
+        <Column><Text style={{ ...mono, textAlign: "center", padding: [6, 0, 0] }}>{Math.floor(daily.length / 2) + 1}</Text></Column>
+        <Column style={rightInset}><Text style={{ ...mono, textAlign: "right", padding: [6, 0, 0] }}>{daily.length}</Text></Column>
+      </Row>
+      <Row stackOnMobile={false} style={{ backgroundColor: PLOT, color: PLOT_TEXT, gap: 8, alignItems: "end" }}>
+        <Column style={{ padding: [15, 0, 20, 36], mobile: { padding: [13, 0, 18, 16] } }}>
+          <Text style={{ fontSize: 15, lineHeight: 1.4 }}>
+            {peak > 0 ? <><Span style={{ color: PEAK, fontWeight: 700 }}>Peak</Span>{` ${dateLabel(peakIndex)} · ${number(peak)}`}</> : `No ${unit.plural} recorded.`}
+          </Text>
+        </Column>
+        <Column style={{ width: 135, padding: [0, 36, 20, 0], mobile: { padding: [0, 16, 18, 0] } }}>
+          <Text style={{ fontSize: 14, color: PLOT_QUIET, textAlign: "right" }}><Span style={{ color: WEEKEND }}>■</Span> Weekends</Text>
+        </Column>
+      </Row>
+    </>
   );
 }
 
-function metric(name: string, value: string, unit = "") {
+function PlanMeter({ planName, planLimit, unit, total, ratio, month }: Pick<UsageReportData, "planName" | "planLimit" | "unit"> & { total: number; ratio: number; month: Date }) {
+  const overLimit = ratio > 1;
+  const tone = overLimit ? ALERT : ratio >= 0.8 ? AMBER : GREEN;
+  const background = overLimit ? ALERT_WASH : ratio >= 0.8 ? WARN_WASH : CALM_WASH;
+  const status = overLimit ? "Over the limit" : ratio === 1 ? "Limit reached" : ratio >= 0.8 ? "Approaching limit" : "Within limit";
+  const figure = `${number(total)} of ${quantity(planLimit, unit)}`;
+  // Keep both segments visible when the included usage or excess is less than one percent of the bar.
+  const includedShare = overLimit ? Math.max(0.01, Math.min(0.99, 1 / ratio)) : ratio;
   return (
-    <Column style={{ gap: 5, padding: [10, 0, 0], border: { top: `1px solid ${RULE}` } }}>
-      <Text style={{ fontSize: 14, lineHeight: 1.4, color: QUIET }}>{name}</Text>
-      <Text style={{ ...mono, fontSize: 23, lineHeight: 1.1, mobile: { fontSize: 18 } }}>
-        {value}{unit && <Span style={{ fontFamily: SANS, fontSize: 14, color: QUIET }}>{unit}</Span>}
-      </Text>
-    </Column>
+    <>
+      <Row stackOnMobile={false} style={{ backgroundColor: background, gap: 8, alignItems: "end" }}>
+        <Column style={{ padding: [19, 0, 9, 36], mobile: { padding: [17, 0, 9, 16] } }}>
+          <Heading level={2} style={smallHeading}>{planName} plan</Heading>
+        </Column>
+        <Column style={{ width: 182, padding: [0, 36, 9, 0], mobile: { padding: [0, 16, 9, 0] } }}>
+          <Text style={{ fontSize: 14, color: tone, fontWeight: 700, textAlign: "right" }}>{status}</Text>
+        </Column>
+      </Row>
+      <Row stackOnMobile={false} style={{ backgroundColor: background, gap: 8, alignItems: "end" }}>
+        <Column style={{ padding: [0, 0, 9, 36], mobile: { padding: [0, 0, 9, 16] } }}>
+          <Text style={label}>{figure}</Text>
+        </Column>
+        <Column style={{ width: 135, padding: [0, 36, 9, 0], mobile: { padding: [0, 16, 9, 0] } }}>
+          <Text style={{ ...quantityStyle, fontSize: 18, color: tone }}>{usagePercent(ratio)}</Text>
+        </Column>
+      </Row>
+      <Row style={{ backgroundColor: background }}>
+        <Column style={insets}>
+          {overLimit ? fillBar(includedShare, 10, ALERT, INK) : fillBar(includedShare, 8, RULE, tone)}
+        </Column>
+      </Row>
+      <Row style={{ backgroundColor: background }}>
+        <Column style={{ padding: [10, 36, 19], gap: 6, mobile: { padding: [10, 16, 17] } }}>
+          {overLimit && (
+            <Text style={{ fontSize: 15, color: tone, fontWeight: 700 }}>
+              {`■ ${quantity(normalize(total - planLimit), unit)} over the limit`}
+            </Text>
+          )}
+          <Text style={{ color: QUIET, fontSize: 15, lineHeight: 1.45 }}>{usageForecast(month, total, planLimit, unit)}</Text>
+        </Column>
+      </Row>
+    </>
+  );
+}
+
+function Breakdown({ breakdown = [], breakdownTitle, breakdownNameStyle, total }: Pick<UsageReportData, "breakdown" | "breakdownTitle" | "breakdownNameStyle"> & { total: number }) {
+  const ranked = [...breakdown].sort((a, b) => b.count - a.count);
+  return (
+    <>
+      <Row style={{ backgroundColor: PAPER }}>
+        <Column style={{ padding: [27, 36, 5], mobile: { padding: [23, 16, 4] } }}>
+          <Heading level={2} style={smallHeading}>{breakdownTitle}</Heading>
+          {ranked.length === 0 && <Text style={{ color: QUIET, padding: [8, 0, 0] }}>No breakdown data for this month.</Text>}
+        </Column>
+      </Row>
+      {ranked.flatMap(({ name, count }) => [
+        <Row key={`${name}-label`} stackOnMobile={false} style={{ backgroundColor: PAPER, alignItems: "start", gap: 8 }}>
+          <Column style={{ padding: [11, 0, 6, 36], mobile: { padding: [11, 0, 6, 16] } }}>
+            <Text style={breakdownNameStyle === "code" ? mono : { fontSize: 15 }}>{name}</Text>
+          </Column>
+          <Column style={{ width: 106, padding: [11, 36, 6, 0], mobile: { padding: [11, 16, 6, 0] } }}>
+            <Text style={quantityStyle}>{number(count)}</Text>
+          </Column>
+        </Row>,
+        <Row key={`${name}-bar`} style={{ backgroundColor: PAPER }}>
+          <Column style={insets}>{fillBar(total > 0 ? count / total : 0, 3, TINT, RUST)}</Column>
+        </Row>,
+      ])}
+    </>
+  );
+}
+
+function figureValue(value: number, unit: string) {
+  return `${number(value).replaceAll("-", "−")}${unit === "%" ? "%" : ` ${unit}`}`;
+}
+
+function figureDelta(value: number, previous: number, unit: string) {
+  if (value === previous) return "Unchanged";
+  const difference = normalize(Math.abs(value - previous));
+  return `${value > previous ? "+" : "−"}${figureValue(difference, unit === "%" ? "pp" : unit)}`;
+}
+
+function Performance({ figures, title }: { figures: readonly Figure[]; title: string }) {
+  const showComparison = figures.some(({ previous }) => previous !== undefined);
+  return (
+    <>
+      <Row style={{ backgroundColor: PAPER }}>
+        <Column style={{ padding: [27, 36, 11], gap: 4, mobile: { padding: [23, 16, 10] } }}>
+          <Heading level={2} style={{ ...smallHeading, fontSize: 19 }}>{title}</Heading>
+          {showComparison && <Text style={{ fontSize: 14, color: QUIET }}>Change from last month</Text>}
+        </Column>
+      </Row>
+      <Row stackOnMobile={false} style={{ backgroundColor: PAPER, gap: 15, mobile: { gap: 10 } }}>
+        {figures.map(({ label: name, value, unit, previous }, index) => (
+          <Column key={name} style={{ ...(index === 0 ? leftInset : {}), ...(index === figures.length - 1 ? rightInset : {}), ...(figures.length === 1 ? insets : {}), gap: 4 }}>
+            <Divider style={{ borderTop: `1px solid ${RULE}` }} />
+            <Text style={{ fontSize: 14, lineHeight: 1.4, color: QUIET, padding: [4, 0, 0] }}>{name}</Text>
+            <Text style={{ ...mono, fontSize: 22, lineHeight: 1.15, mobile: { fontSize: 18 } }}>{figureValue(value, unit)}</Text>
+            {previous !== undefined && (
+              <Text style={{ fontSize: 14, lineHeight: 1.35, fontWeight: 700, color: value > previous ? GREEN : value < previous ? RUST : QUIET }}>
+                {figureDelta(value, previous, unit)}
+              </Text>
+            )}
+          </Column>
+        ))}
+      </Row>
+    </>
   );
 }
 
 export default function KestrelUsageReport({ data = exampleUsage }: KestrelUsageReportProps = {}) {
   const month = monthStart(data.month);
-  const { daily, workspace, previousTotal, planName, planLimit, endpoints, p50Ms, p95Ms, errorRate } = data;
+  const { daily, workspace, previousTotal, planName, planLimit, unit, performance = [] } = data;
   if (daily.length !== daysInMonth(month)) {
-    throw new RangeError(`Give one count for each of ${monthName.format(month)}’s ${daysInMonth(month)} UTC days.`);
+    throw new RangeError(`Give one value for each of ${monthName.format(month)}’s ${daysInMonth(month)} UTC days.`);
   }
-  if (![...daily, previousTotal, planLimit, ...endpoints.map(({ requests }) => requests)].every((count) => Number.isSafeInteger(count) && count >= 0) || planLimit === 0) {
-    throw new RangeError("Request counts must be nonnegative whole numbers and the plan limit must be positive.");
+  if (![...daily, previousTotal, planLimit, ...(data.breakdown ?? []).map(({ count }) => count)].every((count) => Number.isFinite(count) && count >= 0) || planLimit === 0) {
+    throw new RangeError("Usage values must be finite and nonnegative, and the plan limit must be positive.");
   }
 
-  const total = daily.reduce((sum, count) => sum + count, 0);
-  const usageRatio = total / planLimit;
+  const site = companySite(data);
+  const total = sumUsage(daily);
+  const ratio = normalize(total / planLimit);
+  const overLimit = ratio > 1;
   const change = previousTotal > 0 ? (total - previousTotal) / previousTotal : null;
   const previous = monthName.format(shiftMonth(month, -1));
   const period = monthAndYear.format(month);
-  const forecast = usageForecast(month, total, planLimit);
-  const ranked = [...endpoints].sort((a, b) => b.requests - a.requests);
-  const planUsed = usagePercent(usageRatio);
-  const changeLabel = change !== null && change >= 100 ? `+${short.format(change * 100)}%` : signed.format(change ?? 0);
+  const changeLabel = change === null || change === 0 ? "" : Math.abs(change) < 0.0005
+    ? (change > 0 ? "<+0.1%" : ">−0.1%")
+    : Math.abs(change) >= 10
+      ? `${change > 0 ? "+" : "−"}${number(Math.abs(change) * 100)}%`
+      : signed.format(change).replaceAll("-", "−");
 
   return (
     <Email
       width={616}
       lang="en"
-      title={`Kestrel usage report · ${period}`}
-      previewText={`${workspace} made ${short.format(total)} requests in ${monthName.format(month)} and used ${planUsed} of the ${planName} plan.`}
+      title={`${data.companyName} usage report · ${period}`}
+      previewText={`${workspace} used ${quantity(total, unit)} in ${monthName.format(month)}, ${usagePercent(ratio)} of the ${planName} plan.`}
       fonts={[
         { family: "Figtree", src: "https://fonts.gstatic.com/s/figtree/v9/_Xms-HUzqDCFdgfMm4S9DaRvzig.woff2", format: "woff2", weight: "300 900" },
         { family: "DM Mono", src: "https://fonts.gstatic.com/s/dmmono/v16/aFTU7PB1QTsUX8KYthqQBK6PYK0.woff2", format: "woff2", weight: 400 },
       ]}
       style={{ backgroundColor: DESK, color: INK, fontFamily: SANS, fontSize: 16, lineHeight: 1.5 }}
     >
-      <Section style={{ padding: [36, 0, 38], gap: 18, mobile: { padding: [12, 10, 24], gap: 14 } }}>
-        <Column style={{ backgroundColor: PAPER, padding: [25, 36, 30], gap: 30, mobile: { padding: [21, 16, 24], gap: 24 } }}>
-          <Row stackOnMobile={false} style={{ alignItems: "center", padding: [0, 0, 16], border: { bottom: `1px solid ${INK}` } }}>
-            <Column>
-              <Text style={{ fontSize: 27, fontWeight: 800, letterSpacing: -1.5, lineHeight: 1 }}>
-                <Link href={SITE} style={{ color: INK, textDecoration: "none" }}>kestrel<Span style={{ color: RUST }}>.</Span></Link>
-              </Text>
-            </Column>
-            <Column style={{ width: 140 }}>
-              <Text style={{ ...label, textAlign: "right" }}>Usage report</Text>
-            </Column>
-          </Row>
-
-          <Column style={{ gap: 9 }}>
-            <Text style={{ ...label, textTransform: "none" }}>{period} · {workspace}</Text>
-            <Heading level={1} style={{ fontFamily: MONO, fontSize: 84, fontWeight: 400, lineHeight: 1.03, letterSpacing: -5.5, mobile: { fontSize: 62, letterSpacing: -3.5 } }}>
-              {short.format(total)}
-            </Heading>
-            <Text style={{ fontSize: 18, lineHeight: 1.4, color: QUIET, mobile: { fontSize: 16 } }}>
-              <Span style={{ color: INK, fontWeight: 700 }}>API requests</Span>
-              {" · "}
-              {change === null
-                ? `No requests in ${previous}`
-                : change === 0
-                  ? `Unchanged from ${previous}`
-                  : <><Span style={{ color: RUST, fontWeight: 700 }}>{changeLabel}</Span> {`vs.\u00a0${previous}`}</>}
+      <Section style={{ padding: [24, 10] }}>
+        <Row stackOnMobile={false} style={{ backgroundColor: PAPER, gap: 8, alignItems: "center" }}>
+          <Column style={{ padding: [25, 0, 15, 36], mobile: { padding: [20, 0, 12, 16] } }}>
+            <Text style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.1, mobile: { fontSize: 21 } }}>
+              <Link href={site} style={{ color: INK, textDecoration: "none" }}>{data.companyName}<Span style={{ color: RUST }}>.</Span></Link>
             </Text>
           </Column>
-
-          <DailyChart month={month} daily={daily} />
-
-          <Column style={{ backgroundColor: TINT, padding: [18, 22, 20], gap: 11, mobile: { padding: [16, 16, 18] } }}>
-            <Heading level={2} style={smallHeading}>{planName} plan</Heading>
-            <Row stackOnMobile={false} style={{ alignItems: "end", gap: 8 }}>
-              <Column><Text style={{ ...mono, color: QUIET }}>{short.format(total)} of {short.format(planLimit)}</Text></Column>
-              <Column style={{ width: 92 }}>
-                <Text style={{ ...mono, fontSize: 19, color: RUST, textAlign: "right" }}>{planUsed}</Text>
-              </Column>
-            </Row>
-            {fillBar(usageRatio, 8, RULE, RUST)}
-            <Text style={{ color: QUIET, fontSize: 15, lineHeight: 1.45 }}>{forecast}</Text>
+          <Column style={{ width: 155, padding: [25, 36, 15, 0], mobile: { padding: [20, 16, 12, 0] } }}>
+            <Text style={{ ...label, textAlign: "right" }}>USAGE REPORT</Text>
           </Column>
-
-          <Column style={{ gap: 15 }}>
-            <Heading level={2} style={smallHeading}>Top endpoints</Heading>
-            {ranked.length > 0 ? ranked.map((endpoint) => endpointRow(endpoint, total)) : <Text style={{ color: QUIET }}>No endpoint counts for this month.</Text>}
+        </Row>
+        <Row style={{ backgroundColor: PAPER }}>
+          <Column style={{ padding: [0, 36, 26], gap: 8, mobile: { padding: [0, 16, 23] } }}>
+            <Divider style={{ borderTop: `1px solid ${INK}` }} />
+            <Text style={{ ...label, padding: [10, 0, 0] }}>{period} · {workspace}</Text>
+            <Heading level={1} style={{ fontFamily: SANS, fontSize: 80, fontWeight: 700, lineHeight: 1, mobile: { fontSize: 59 } }}>{number(total)}</Heading>
+            <Text style={{ fontSize: 18, lineHeight: 1.4, color: QUIET, mobile: { fontSize: 16 } }}>
+              <Span style={{ color: INK, fontWeight: 700 }}>{data.metricLabel}</Span>{" · "}
+              {change === null
+                ? `No usage in ${previous}`
+                : change === 0
+                  ? `Unchanged from ${previous}`
+                  : <><Span style={{ color: change > 0 ? GREEN : RUST, fontWeight: 700 }}>{changeLabel}</Span>{` vs. ${previous}`}</>}
+            </Text>
           </Column>
-
-          <Column style={{ gap: 12 }}>
-            <Heading level={2} style={{ ...smallHeading, fontSize: 19 }}>Gateway performance</Heading>
-            <Row stackOnMobile={false} style={{ gap: 15, mobile: { gap: 10 } }}>
-              {metric("p50 latency", latency.format(p50Ms), " ms")}
-              {metric("p95 latency", latency.format(p95Ms), " ms")}
-              {metric("Error rate", errorPercent.format(errorRate))}
-            </Row>
+        </Row>
+        <DailyChart month={month} daily={daily} unit={unit} />
+        <PlanMeter planName={planName} planLimit={planLimit} unit={unit} total={total} ratio={ratio} month={month} />
+        <Breakdown breakdown={data.breakdown} breakdownTitle={data.breakdownTitle} breakdownNameStyle={data.breakdownNameStyle} total={total} />
+        {performance.length > 0 && <Performance figures={performance} title={data.performanceTitle || "Performance"} />}
+        <Row style={{ backgroundColor: PAPER }}>
+          <Column style={{ padding: [24, 36, 16], mobile: { padding: [22, 16, 14] } }}>
+            <Divider style={{ borderTop: `1px solid ${RULE}` }} />
           </Column>
-
-          <Row stackOnMobile={false} style={{ alignItems: "center", gap: 18, padding: [20, 0, 0], border: { top: `1px solid ${RULE}` }, mobile: { gap: 14 } }}>
-            <Column style={{ width: 155 }}>
-              <Button href={data.usageUrl} style={{ width: "100%", padding: [13, 0], backgroundColor: RUST, color: PAPER, fontSize: 15, fontWeight: 700, hover: { backgroundColor: RUST_DOWN } }}>
-                See full usage
-              </Button>
-            </Column>
-            <Column>
-              <Text style={{ fontSize: 15 }}><Link href={data.planUrl} style={{ color: RUST, fontWeight: 700 }}>Change plan</Link></Text>
-            </Column>
-          </Row>
-        </Column>
-
-        <Column style={{ gap: 4, padding: [0, 18], mobile: { padding: [0, 8] } }}>
-          <Text style={{ fontSize: 14, color: QUIET }}>
-            Usage updates for {workspace}.{" "}
-            <Link href={data.notificationsUrl} style={{ color: RUST }}>{"Manage\u00a0notifications"}</Link>
-          </Text>
-          <Text style={{ fontSize: 14, color: QUIET }}>
-            Kestrel Systems · 18 Kildeer Ln, Alder Reach
-          </Text>
-        </Column>
+        </Row>
+        <Row stackOnMobile={false} style={{ backgroundColor: PAPER, alignItems: "center", gap: 14 }}>
+          <Column style={{ width: 198, padding: [0, 0, 27, 36], mobile: { padding: [0, 0, 23, 16] } }}>
+            <Button href={overLimit ? data.planUrl : data.usageUrl} style={{ width: "100%", padding: [13, 0], backgroundColor: RUST, color: PAPER, fontSize: 15, fontWeight: 700 }}>
+              {overLimit ? "Upgrade plan" : "See full usage"}
+            </Button>
+          </Column>
+          <Column style={{ padding: [0, 36, 27, 0], mobile: { padding: [0, 16, 23, 0] } }}>
+            <Text style={{ fontSize: 15 }}><Link href={overLimit ? data.usageUrl : data.planUrl} style={{ color: RUST, fontWeight: 700 }}>{overLimit ? "See full usage" : "Change plan"}</Link></Text>
+          </Column>
+        </Row>
+        <Row>
+          <Column style={{ padding: [16, 18, 0], gap: 4, mobile: { padding: [13, 8, 0] } }}>
+            <Text style={{ fontSize: 14, color: QUIET }}>
+              Usage updates for {workspace}.{" "}<Link href={data.notificationsUrl} style={{ color: RUST }}>{"Manage notifications"}</Link>
+            </Text>
+            <Text style={{ fontSize: 14, color: QUIET }}>{data.companyName} · {data.postalAddress}</Text>
+          </Column>
+        </Row>
       </Section>
     </Email>
   );

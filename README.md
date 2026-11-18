@@ -1,88 +1,116 @@
 # Kestrel monthly usage report
 
-**A Hyper Elements template for a monthly usage email: requests per day as a bar chart built from table cells, so classic Outlook draws it too, and how near the plan’s limit the workspace is. No images.**
+**A monthly usage email with a chart made of table cells so classic Outlook can draw every day.**
 
 <p>
-  <a href="docs/kestrel-desktop.png"><img src="docs/kestrel-desktop.png" width="475" alt="Desktop usage report for Northwind Labs in October 2026. It shows 48.2 million API requests and a 31-day chart."></a>
-  <a href="docs/kestrel-phone.png"><img src="docs/kestrel-phone.png" width="244" alt="The same report at phone width, with all 31 bars and the plan meter in view."></a>
+  <a href="docs/kestrel-desktop.png"><img src="docs/kestrel-desktop.png" width="455" alt="Desktop report for Northwind Labs. October usage reached 48.2 million requests, or 80.3% of the plan limit."></a>
+  <a href="docs/kestrel-phone.png"><img src="docs/kestrel-phone.png" width="234" alt="The same report on a phone, with all 31 days visible."></a>
 </p>
 
 ## Why it exists
 
-Usage emails should tell an operator what changed, when traffic peaked, and whether the workspace is on pace to hit its limit. Kestrel puts those answers in the inbox and gives the recipient a link to the underlying usage. The chart needs no image downloads.
+People who pay by the request, message, GB, or build minute need to know what changed and whether their plan will cover next month. This template turns one month of daily usage into an email with a forecast and a link to act on it. The chart loads with the email, even when image downloads are blocked.
 
 ## Use it
 
-Install and build the gallery example. The Chromium install enables screenshots from the build.
+Install the dependencies and render the gallery example and the three values files. The build writes HTML and plain text to `out/` and captures desktop and phone views when Chromium is available.
 
 ```sh
+git clone https://github.com/adityasarade/hyper-elements-usage-email.git
+cd hyper-elements-usage-email
 npm ci
 npx playwright install chromium
 npm run build
 ```
 
-In your app, pass the workspace’s data to the same component. The returned `html` and `text` are the two parts of the email.
+Pass checked data to the component in your app. Use the returned `html` and `text` as the two parts of a transactional email.
 
 ```tsx
 import { render } from "@hyper-elements/react";
 import KestrelUsageReport from "./src/kestrel-usage-report";
-import morrow from "./designs/morrow-february.values.json";
+import UsageReport from "./templates/usage-report";
+import morrow from "./designs/morrow-february.values.json" with { type: "json" };
 
-const { html, text } = await render(<KestrelUsageReport data={morrow.values} />);
+const { valid, values } = UsageReport.check(morrow.values);
+if (!valid || !values) throw new Error("Invalid usage report values");
+const { html, text } = await render(<KestrelUsageReport data={values} />);
 ```
 
-To prepare a report through the template, use the `values` object in the Morrow example as a starting point for `usage.json`. Fill it with one completed UTC calendar month.
+To fill the template from the CLI, copy the `values` object from an example into `usage.json`. Supply one value per UTC day of a completed calendar month, then run:
 
 ```sh
 npx hyper-elements describe templates/usage-report.tsx
 npx hyper-elements design new templates/usage-report.tsx --values usage.json -o designs/your-workspace.values.json
-npx hyper-elements render designs/your-workspace.values.json
+npm run build -- designs/your-workspace.values.json
 ```
 
 ## How Hyper Elements is used
 
-- **Daily traffic.** `Email` renders layout tables. Each day is one empty `Column` inside a `Row stackOnMobile={false}`. The table cell gets a numeric height and a background color. Weekends are lighter and the peak is orange. A visible peak caption and a chart summary in the text part give readers the numbers behind the bars.
-- **Plan and endpoints.** Two side-by-side cells split each meter by percentage. The plan uses total requests divided by the limit. The endpoint bars use each route’s share of all requests. The forecast carries this month’s average daily usage and plan limit into the next calendar month.
-- **Template.** `kestrel.UsageReport` bounds the fields and checks that the report has one whole count per day. Its required rules cover link text, language, contrast, preview text and layout overflow. The three workspace links must point to `kestrel.example`.
+- **Daily chart.** An `Email` lays out a `Row stackOnMobile={false}` with one colored `Column` per day. The height comes from that day’s usage, weekends use a lighter shade, and the peak gets a separate color and caption. The chart’s accessible summary also goes into the plain-text part.
+- **Plan and forecast.** The meter is calm below 80%, warns from 80% through 100%, and switches to an over-limit state above 100%. Two cells show the included usage and the excess. The primary button switches to **Upgrade plan** when there’s an overage. The forecast uses the month’s average daily usage and next month’s calendar to give a closing total or the expected date of the first overage.
+- **Template fields.** Set the company, postal address, billing unit, headline label, and breakdown title and name style. Breakdown names can be up to 48 characters. Add up to three performance figures with optional previous values. `kestrel.UsageReport` checks calendar coverage, language, preview text, link text, contrast and layout. Each destination must use an exact hostname from the filler’s company domain list. Version 2 reads version 1 values files through a migration.
 
 ```tsx
 <Column style={{
-  height: Math.round(plotHeight * requests / ceiling),
-  backgroundColor: index === peakIndex ? PEAK : weekend ? WEEKEND : WEEKDAY,
+  height: barHeight(count),
+  backgroundColor: count === 0 ? undefined : index === peakIndex ? PEAK : weekend ? WEEKEND : WEEKDAY,
 }} />
 ```
 
+## Edit it in Unlayer's builder
+
+Run `npm run design-json`, then pass `out/kestrel-usage-report.design.json` to the editor’s `loadDesign()`. The export uses `toDesign()` from `@hyper-elements/react/builder`.
+
+The wordmark, headline number, headings, captions, paragraphs, breakdown names and counts, performance figures, buttons, and footer links load as editable builder tools. The six HTML blocks in the gallery example are the daily chart, the plan meter, and four breakdown bars. Move those blocks in the editor or change the source values and export again to recalculate them and their labels.
+
+![Kestrel usage report in Unlayer’s builder](docs/builder.jpg)
+
 ## Views
 
-### Chart in email clients
+### Classic Outlook for Windows
 
-Playwright screenshots of the first message frame in the Hyper Elements client emulator. The Outlook and Gmail previews use fallback fonts. All three retain the 31 bars and the highlight on 23 October.
+All 31 bars survive as colored table cells in the Hyper Elements emulator.
 
-| Classic Outlook for Windows | Gmail on the web | Apple Mail on Mac |
+[![The chart in classic Outlook for Windows, with the 23 October peak and weekend markers.](docs/chart-outlook.png)](docs/chart-outlook.png)
+
+### Outlook for Mac in dark mode
+
+The dark-mode emulator recolors the report. The peak and plan warning are both labeled in text.
+
+<p>
+  <a href="docs/outlook-mac-dark.png"><img src="docs/outlook-mac-dark.png" width="420" alt="The Northwind report in Outlook for Mac dark mode, with the full chart and plan meter."></a>
+</p>
+
+```sh
+npx hyper-elements preview src/kestrel-usage-report.tsx --clients outlook,outlook-mac --dark
+```
+
+Open `outlook.html` and `outlook-mac.dark.html` under `out/clients/src/kestrel-usage-report/` for the emulator previews.
+
+### More datasets
+
+| Report | Result | Phone view |
 | --- | --- | --- |
-| [![Chart in classic Outlook](docs/chart-outlook.png)](docs/chart-outlook.png) | [![Chart in Gmail](docs/chart-gmail.png)](docs/chart-gmail.png) | [![Chart in Apple Mail](docs/chart-apple-mail.png)](docs/chart-apple-mail.png) |
+| [Morrow Works](designs/morrow-february.values.json) | Two zero-traffic days and 13.7% of the plan used | [Open](docs/morrow-phone.png) |
+| [Postern Mail](designs/postern-june.values.json) | 1.30M emails sent, plain-text sender names, performance section omitted | [Open](docs/postern-phone.png) |
+| [Northwind over the limit](designs/northwind-over-limit.values.json) | 126.8% of the plan used, 10.2M requests over, and an upgrade button | [Open](docs/northwind-over-limit-phone.png) |
 
-Generate these preview HTML files with `npx hyper-elements preview src/kestrel-usage-report.tsx --clients outlook,gmail,apple-mail`. They go to `out/clients/src/kestrel-usage-report/`.
-
-### A quieter workspace
-
-Morrow Works made 274,486 requests across 28 days, with two zero-traffic days. Its 13.7% plan meter and February chart come from [the values file](designs/morrow-february.values.json). [Open its phone view](docs/morrow-phone.png).
-
-### Plain text
-
-The text part includes exact numbers for the busiest and quietest days and totals for each seven-day slice of the month. [Read the October text part](docs/kestrel.txt).
+The [October plain-text part](docs/kestrel.txt) includes the exact totals for the busiest day, the quietest day, and each seven-day slice of the month.
 
 ## Checks
 
 | Command | Result |
 | --- | --- |
-| `npm run build` | `✓ src/kestrel-usage-report.tsx (Email): 0 errors and warnings, 11 notes` |
-| `npx hyper-elements check templates designs` | `2 designs: 0 errors, 0 warnings, 0 skipped` |
+| `npm run build` | 4 renders with 0 errors and 0 warnings |
+| `npx hyper-elements check src templates designs` | 5 designs with 0 errors, 0 warnings, and 0 skipped |
 | `npx tsc --noEmit` | Exit 0 |
+| `npm run design-json` | 6 HTML fallbacks, all for charts or bars |
+
+The two build notes cover web-font and phone-style support in some clients. Fallback fonts and the base table layout keep the report readable there.
 
 ## Add it to the gallery
 
-Copy `src/kestrel-usage-report.tsx` to `apps/website/examples/templates/`. It has the gallery’s `meta` and renders with no props.
+Copy [`src/kestrel-usage-report.tsx`](src/kestrel-usage-report.tsx) to `apps/website/examples/templates/`. It has the gallery’s `meta` and renders with no props.
 
 ## License
 
