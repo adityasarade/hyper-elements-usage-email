@@ -1,0 +1,33 @@
+{
+  "name": "hyper-elements-usage-email",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsx scripts/build.tsx",
+    "check": "hyper-elements check src templates designs"
+  },
+  "dependencies": {
+    "@hyper-elements/react": "0.5.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@hyper-elements/cli": "^0.3.0",
+    "@hyper-elements/email-clients": "*",
+    "@hyper-elements/lint": "*",
+    "@react-pdf/renderer": "4.9.0",
+    "@resvg/resvg-js": "^2.6.2",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.2.0",
+    "playwright": "^1.64.1",
+    "satori": "~0.33.5",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  },
+  "hyperElements": {
+    "templates": [
+      "templates/usage-report.tsx",
+      "src/kestrel-usage-report.tsx"
+    ]
+  }
+}

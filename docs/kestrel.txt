@@ -1,0 +1,75 @@
+kestrel. (https://kestrel.example)
+
+Usage report
+
+October 2026 · Northwind Labs
+
+48.2M
+
+API requests · +12% vs. September
+
+REQUESTS PER DAY
+
+2.5M
+
+1 Oct
+
+16
+
+31
+
+Peak 23 Oct · 2.42M
+
+Weekends
+
+Busiest day: 23 Oct, 2,421,000 requests.
+Quietest day: 4 Oct, 892,000 requests.
+Weekly totals: 1–7 Oct: 9,494,000; 8–14 Oct: 10,175,000; 15–21 Oct: 11,250,000; 22–28 Oct: 12,266,000; 29–31 Oct: 5,015,000.
+
+SCALE PLAN
+
+48.2M of 60M
+
+80.3%
+
+At this pace, November would close at 46.6M requests.
+
+TOP ENDPOINTS
+
+/v1/events
+
+18,740,618
+
+/v1/resolve
+
+11,369,082
+
+/v1/tokens
+
+7,803,154
+
+/v1/projects
+
+4,221,703
+
+GATEWAY PERFORMANCE
+
+p50 latency
+
+42 ms
+
+p95 latency
+
+118 ms
+
+Error rate
+
+0.18%
+
+See full usage (https://kestrel.example/northwind/usage)
+
+Change plan (https://kestrel.example/northwind/plan)
+
+Usage updates for Northwind Labs. Manage notifications (https://kestrel.example/northwind/notifications)
+
+Kestrel Systems · 18 Kildeer Ln, Alder Reach

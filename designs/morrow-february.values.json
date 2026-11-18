@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "template": {
+    "module": "../templates/usage-report.tsx",
+    "id": "kestrel.UsageReport",
+    "version": "1.0.0",
+    "sha256": "875147bcd16db4d425d7083feb93518ab4ed3b04d719deb9b5ee8e4af6982fdc"
+  },
+  "values": {
+    "workspace": "Morrow Works",
+    "month": "2026-02-01",
+    "daily": [
+      0,
+      9630,
+      10574,
+      11160,
+      12800,
+      11620,
+      1842,
+      411,
+      10430,
+      12460,
+      40980,
+      15846,
+      11912,
+      1064,
+      796,
+      13970,
+      11062,
+      12264,
+      11685,
+      10482,
+      1209,
+      0,
+      12377,
+      13683,
+      11401,
+      12616,
+      10688,
+      1524
+    ],
+    "previousTotal": 332600,
+    "planName": "Starter",
+    "planLimit": 2000000,
+    "endpoints": [
+      {
+        "path": "/v2/schemas/validate",
+        "requests": 92718
+      },
+      {
+        "path": "/v2/events",
+        "requests": 70631
+      },
+      {
+        "path": "/v2/keys",
+        "requests": 44122
+      },
+      {
+        "path": "/v2/status",
+        "requests": 14705
+      },
+      {
+        "path": "/v2/replay",
+        "requests": 3632
+      }
+    ],
+    "p50Ms": 19.6,
+    "p95Ms": 73.4,
+    "errorRate": 0.00023,
+    "usageUrl": "https://kestrel.example/morrow/usage",
+    "planUrl": "https://kestrel.example/morrow/plan",
+    "notificationsUrl": "https://kestrel.example/morrow/notifications"
+  }
+}
