@@ -110,7 +110,13 @@ The two build notes cover web-font and phone-style support in some clients. Fall
 
 ## Add it to the gallery
 
-Copy [`src/kestrel-usage-report.tsx`](src/kestrel-usage-report.tsx) to `apps/website/examples/templates/`. It has the gallery’s `meta` and renders with no props.
+Copy [`src/kestrel-usage-report.tsx`](src/kestrel-usage-report.tsx) to `apps/website/examples/templates/`. It has the gallery's `meta` and renders with no props.
+
+We tested exactly that: the file, unchanged, in a local clone of the Hyper Elements site, through the site's own
+generator (`pnpm generate`) and dev server. It rendered with 2 notes, both `info`: web fonts don't load in some email clients, and some clients keep desktop styles on phones, and appears on `/templates/kestrel-usage-report` beside the
+official designs:
+
+![The design on its page in a local build of the Hyper Elements template gallery, with its preview and source.](docs/in-the-gallery.jpg)
 
 ## License
 
