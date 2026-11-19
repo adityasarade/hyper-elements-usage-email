@@ -5,6 +5,7 @@
   "scripts": {
     "build": "tsx scripts/build.tsx",
     "check": "hyper-elements check src templates designs",
+    "test": "tsx --test scripts/usage-report.test.ts",
     "design-json": "tsx scripts/design-json.tsx",
     "builder-preview": "node scripts/builder-preview.mjs"
   },

@@ -3,8 +3,8 @@
   "template": {
     "module": "../templates/usage-report.tsx",
     "id": "kestrel.UsageReport",
-    "version": "2.0.0",
-    "sha256": "641f179520d9513dd1b88f7b8f2afd1f9760840ccbe4c73410a7e13a9b4365dd"
+    "version": "2.1.0",
+    "sha256": "36b55653509fed37e4ed64d9dc488c140a6586e9c7b8e7dc576a6c9d22cfbb28"
   },
   "values": {
     "companyName": "Kestrel Systems",
@@ -81,19 +81,22 @@
         "label": "p50 latency",
         "value": 42,
         "unit": "ms",
-        "previous": 39
+        "previous": 39,
+        "better": "lower"
       },
       {
         "label": "p95 latency",
         "value": 118,
         "unit": "ms",
-        "previous": 126
+        "previous": 126,
+        "better": "lower"
       },
       {
         "label": "Error rate",
         "value": 0.18,
         "unit": "%",
-        "previous": 0.22
+        "previous": 0.22,
+        "better": "lower"
       }
     ],
     "usageUrl": "https://kestrel.example/northwind/usage",

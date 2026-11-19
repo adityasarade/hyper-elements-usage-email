@@ -10,7 +10,7 @@ const HAS_TEXT = "\\S";
 
 export default template({
   id: "kestrel.UsageReport",
-  version: "2.0.0",
+  version: "2.1.0",
   label: "Monthly usage report",
   guidance: "Use a completed UTC calendar month and the same unit throughout. The report computes usage, change and next month’s forecast. Every URL must use one of your listed company domains.",
   root: "Email",
@@ -62,7 +62,7 @@ export default template({
       }, { label: "Breakdown item" }),
       {
         label: "Breakdown", max: 5,
-        guidance: "Use distinct names and their monthly usage. The report sorts them by usage and shows each as a share of the month’s total.",
+        guidance: "Use distinct names for non-overlapping parts of the month’s usage. Their counts may cover all or part of the monthly total.",
       },
     ),
     performanceTitle: prop.text({ label: "Performance heading", maxLength: 36 }),
@@ -72,6 +72,10 @@ export default template({
         value: prop.number({ label: "Value", required: true, min: -MAX_FIGURE, max: MAX_FIGURE }),
         unit: prop.text({ label: "Figure unit", required: true, maxLength: 8, pattern: HAS_TEXT }),
         previous: prop.number({ label: "Last month’s value", min: -MAX_FIGURE, max: MAX_FIGURE }),
+        better: prop.choice(["higher", "lower"], {
+          label: "Direction of improvement", default: "lower",
+          guidance: "Choose lower for latency and error rate, or higher for a figure such as uptime.",
+        }),
       }, { label: "Figure" }),
       {
         label: "Performance figures", max: 3,

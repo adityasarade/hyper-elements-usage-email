@@ -25,13 +25,13 @@ const ALERT = "#8B3024";
 const CALM_WASH = "#EDF2E9";
 const WARN_WASH = "#F8EED9";
 const ALERT_WASH = "#F7E8E1";
-const PLOT = "#29231F";
+const PLOT = "#1C1816";
 const PLOT_TEXT = "#FFF1DF";
 const PLOT_QUIET = "#D4C0AE";
 const PLOT_RULE = "#69584B";
-const WEEKDAY = "#D5A687";
-const WEEKEND = "#EAD3BB";
-const PEAK = "#FF8A57";
+const WEEKDAY = "#A4795B";
+const WEEKEND = "#738F92";
+const PEAK = "#E46834";
 
 const SANS = "Figtree, 'Helvetica Neue', Helvetica, Arial, sans-serif";
 const MONO = "'DM Mono', Consolas, 'Courier New', monospace";
@@ -54,7 +54,7 @@ const longDate = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long
 const dayAndMonth = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
 
 type QuantityUnit = { singular: string; plural: string };
-type Figure = { label: string; value: number; unit: string; previous?: number };
+type Figure = { label: string; value: number; unit: string; previous?: number; better?: "higher" | "lower" };
 
 export type UsageReportData = {
   companyName: string;
@@ -110,9 +110,9 @@ export const exampleUsage = {
   ],
   performanceTitle: "Gateway performance",
   performance: [
-    { label: "p50 latency", value: 42, unit: "ms", previous: 39 },
-    { label: "p95 latency", value: 118, unit: "ms", previous: 126 },
-    { label: "Error rate", value: 0.18, unit: "%", previous: 0.22 },
+    { label: "p50 latency", value: 42, unit: "ms", previous: 39, better: "lower" },
+    { label: "p95 latency", value: 118, unit: "ms", previous: 126, better: "lower" },
+    { label: "Error rate", value: 0.18, unit: "%", previous: 0.22, better: "lower" },
   ],
   usageUrl: `${SITE}/northwind/usage`,
   planUrl: `${SITE}/northwind/plan`,
@@ -142,7 +142,11 @@ function monthStart(isoDate: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate) || !Number.isFinite(+date) || date.toISOString().slice(0, 10) !== isoDate) {
     throw new RangeError("Month must be a real date in YYYY-MM-DD format.");
   }
-  return dateInMonth(date, 1);
+  const start = dateInMonth(date, 1);
+  if (start > new Date()) {
+    throw new RangeError(`month: ${monthAndYear.format(start)} is a future UTC billing month.`);
+  }
+  return start;
 }
 
 function number(value: number) {
@@ -158,6 +162,33 @@ function normalize(value: number) {
 
 function sumUsage(values: readonly number[]) {
   return normalize(values.reduce((sum, value) => sum + value, 0));
+}
+
+function monthlyUsage(daily: readonly number[], items: NonNullable<UsageReportData["breakdown"]>) {
+  const names = new Set<string>();
+  for (const [index, { name, count }] of items.entries()) {
+    const field = `breakdown[${index}]`;
+    if (names.has(name.trim())) throw new RangeError(`${field}.name: duplicate breakdown name “${name}”.`);
+    names.add(name.trim());
+    if (!Number.isFinite(count) || count < 0) throw new RangeError(`${field}.count: expected finite, nonnegative usage.`);
+  }
+
+  // Compare in common decimal units so 0.1 + 0.2 equals 0.3 and a small overage still counts.
+  const parts = [...daily, ...items.map(({ count }) => count)].map((value) => {
+    const [mantissa, power] = value.toExponential().split("e");
+    const [whole, fraction = ""] = mantissa.split(".");
+    return { digits: BigInt(whole + fraction), power: Number(power) - fraction.length };
+  });
+  const power = Math.min(...parts.map((part) => part.power));
+  const units = parts.map((part) => part.digits * 10n ** BigInt(part.power - power));
+  const total = units.slice(0, daily.length).reduce((sum, count) => sum + count, 0n);
+  const asNumber = (count: bigint) => Number(`${count}e${power}`);
+  const breakdown = units.slice(daily.length);
+  const oversized = breakdown.findIndex((count) => count > total);
+  if (oversized >= 0) throw new RangeError(`breakdown[${oversized}].count: ${items[oversized].count} exceeds the month's total of ${asNumber(total)}.`);
+  const subtotal = breakdown.reduce((sum, count) => sum + count, 0n);
+  if (subtotal > total) throw new RangeError(`breakdown: the counts combined exceed the month's total of ${asNumber(total)}.`);
+  return asNumber(total);
 }
 
 function quantity(value: number, unit: QuantityUnit, format = number) {
@@ -212,7 +243,8 @@ const quantityStyle = { ...mono, color: QUIET, textAlign: "right" } as const;
 
 /** Colored table cells give the meter a baseline without an image or web font. */
 function fillBar(ratio: number, height: number, track: string, fill: string) {
-  const filled = Math.min(1, Math.max(0, ratio)) * 100;
+  // Subpixel shares can serialize as exponents, which the email renderer rejects in widths.
+  const filled = Number((ratio * 100).toFixed(4));
   return (
     <Row stackOnMobile={false} style={{ backgroundColor: track }}>
       {filled > 0 && <Column style={{ width: `${filled}%`, height, backgroundColor: fill }} />}
@@ -278,7 +310,7 @@ function DailyChart({ month, daily, unit }: { month: Date; daily: readonly numbe
           </Text>
         </Column>
         <Column style={{ width: 135, padding: [0, 36, 20, 0], mobile: { padding: [0, 16, 18, 0] } }}>
-          <Text style={{ fontSize: 14, color: PLOT_QUIET, textAlign: "right" }}><Span style={{ color: WEEKEND }}>■</Span> Weekends</Text>
+          <Text style={{ fontSize: 14, color: PLOT_QUIET, textAlign: "right" }}><Span style={{ backgroundColor: WEEKEND }}> </Span> Weekends</Text>
         </Column>
       </Row>
     </>
@@ -367,6 +399,12 @@ function figureDelta(value: number, previous: number, unit: string) {
   return `${value > previous ? "+" : "−"}${figureValue(difference, unit === "%" ? "pp" : unit)}`;
 }
 
+function deltaColor(value: number, previous: number, better: Figure["better"] = "lower") {
+  if (value === previous) return QUIET;
+  const improved = better === "higher" ? value > previous : value < previous;
+  return improved ? GREEN : RUST;
+}
+
 function Performance({ figures, title }: { figures: readonly Figure[]; title: string }) {
   const showComparison = figures.some(({ previous }) => previous !== undefined);
   return (
@@ -378,13 +416,13 @@ function Performance({ figures, title }: { figures: readonly Figure[]; title: st
         </Column>
       </Row>
       <Row stackOnMobile={false} style={{ backgroundColor: PAPER, gap: 15, mobile: { gap: 10 } }}>
-        {figures.map(({ label: name, value, unit, previous }, index) => (
+        {figures.map(({ label: name, value, unit, previous, better }, index) => (
           <Column key={name} style={{ ...(index === 0 ? leftInset : {}), ...(index === figures.length - 1 ? rightInset : {}), ...(figures.length === 1 ? insets : {}), gap: 4 }}>
             <Divider style={{ borderTop: `1px solid ${RULE}` }} />
             <Text style={{ fontSize: 14, lineHeight: 1.4, color: QUIET, padding: [4, 0, 0] }}>{name}</Text>
             <Text style={{ ...mono, fontSize: 22, lineHeight: 1.15, mobile: { fontSize: 18 } }}>{figureValue(value, unit)}</Text>
             {previous !== undefined && (
-              <Text style={{ fontSize: 14, lineHeight: 1.35, fontWeight: 700, color: value > previous ? GREEN : value < previous ? RUST : QUIET }}>
+              <Text style={{ fontSize: 14, lineHeight: 1.35, fontWeight: 700, color: deltaColor(value, previous, better) }}>
                 {figureDelta(value, previous, unit)}
               </Text>
             )}
@@ -399,14 +437,14 @@ export default function KestrelUsageReport({ data = exampleUsage }: KestrelUsage
   const month = monthStart(data.month);
   const { daily, workspace, previousTotal, planName, planLimit, unit, performance = [] } = data;
   if (daily.length !== daysInMonth(month)) {
-    throw new RangeError(`Give one value for each of ${monthName.format(month)}’s ${daysInMonth(month)} UTC days.`);
+    throw new RangeError(`daily: expected ${daysInMonth(month)} values for ${monthAndYear.format(month)}, received ${daily.length}.`);
   }
-  if (![...daily, previousTotal, planLimit, ...(data.breakdown ?? []).map(({ count }) => count)].every((count) => Number.isFinite(count) && count >= 0) || planLimit === 0) {
+  if (![...daily, previousTotal, planLimit].every((count) => Number.isFinite(count) && count >= 0) || planLimit === 0) {
     throw new RangeError("Usage values must be finite and nonnegative, and the plan limit must be positive.");
   }
 
   const site = companySite(data);
-  const total = sumUsage(daily);
+  const total = monthlyUsage(daily, data.breakdown ?? []);
   const ratio = normalize(total / planLimit);
   const overLimit = ratio > 1;
   const change = previousTotal > 0 ? (total - previousTotal) / previousTotal : null;
