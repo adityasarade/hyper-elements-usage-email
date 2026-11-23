@@ -4,6 +4,32 @@ A monthly API usage email with one table cell per day, so classic Outlook can dr
 
 <img src="docs/kestrel-hero.png" width="640" alt="October usage for Northwind Labs on desktop and phone. Both show 48.2 million requests and the 23 October peak.">
 
+## In the official templates folder, in all nine sample brands
+
+On 23 November the Hyper Elements team rebuilt their gallery around a `templates/` folder anyone can contribute to,
+where each template is made from a brand and tested in all nine sample brands. This one is ported to that format:
+[`community-template/emails/usage-report/`](community-template/emails/usage-report/template.tsx) is `usageReport(brand)`, which takes every
+color, font and logo from the brand it's given and sets none of its own: the table-cell chart in the brand's colors (the peak in its accent, or its primary where the accent is too pale to stand out), the plan meter, its fonts, logo, address and the links it may use, with lint's checks (preview text, link text, alt text, contrast, text size, language) required. Its default brand is
+Orbit, and its two designs are in `designs/`.
+
+![The same template in each of the nine sample brands: Oyen, Orbit, Quarry, Pith, Ember, Casa Albero, Keel, Pell & Ashby and Slow Signals.](docs/em-nine-brands.gif)
+
+The gallery's own test checks the template's example and both designs against its fields and rules, and renders them,
+in every brand. To run it yourself from a fresh clone of the official repository:
+
+```
+$ bash scripts/verify-in-gallery.sh
+ ✓ emails/usage-report > has designs
+ ✓ emails/usage-report > passes its check in casa-albero, with its example and each design
+ ✓ emails/usage-report > passes its check in ember, with its example and each design
+   … keel, orbit, oyen, pell-ashby, pith, quarry, slow-signals
+ Tests  11 passed
+```
+
+To add it to the gallery, copy `community-template/` into the repository's `templates/`.
+
+[All nine brands side by side](docs/em-nine-brands.jpg)
+
 ## Use it
 
 From the root of a fresh clone, run these three commands.
