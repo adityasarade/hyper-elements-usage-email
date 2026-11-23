@@ -28,6 +28,10 @@ $ bash scripts/verify-in-gallery.sh
 
 To add it to the gallery, copy `community-template/` into the repository's `templates/`.
 
+On the gallery's own website, built locally with the template added, its "How an agent sees it" view reads the template's fields straight from `usageReport(brand)`: what an agent may change is green with its limit, and everything else is locked.
+
+![The template's page on the Hyper Elements website, with the agent view: each field outlined in green with its limit, the rest locked.](docs/official-agent-view.jpg)
+
 [All nine brands side by side](docs/em-nine-brands.jpg)
 
 ## Use it
